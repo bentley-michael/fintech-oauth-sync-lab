@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = ["tests"]
+pythonpath = ["."]
+
+
+[project]
+name = "fintech-oauth-sync-lab"
+version = "0.1.0"
+description = "A lab for testing oauth sync logic without external dependencies"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "httpx>=0.24.0",
+    "pydantic-settings>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "python-multipart>=0.0.6",
+    "pytest>=7.0.0",
+    "respx>=0.20.0",
+    "cryptography>=41.0.0"
+]
+
+[tool.setuptools]
+packages = ["app"]
+
