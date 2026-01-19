@@ -1,5 +1,7 @@
 # Fintech OAuth Sync Lab
 
+[![CI](https://github.com/bentley-michael/fintech-oauth-sync-lab/actions/workflows/ci.yml/badge.svg)](https://github.com/bentley-michael/fintech-oauth-sync-lab/actions/workflows/ci.yml)
+
 A self-contained lab environment demonstrating a robust financial data synchronization engine using Python (FastAPI). Key features include OAuth2 flows, cursor-based pagination, exponential backoff for 429 rate limits, and idempotent transaction upserts.
 
 ## Features
