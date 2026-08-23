@@ -43,7 +43,7 @@ graph TB
     style E fill:#4a9eff
 ✨ Key Features
 🔐 Secure OAuth2 Implementation
-Token Lifecycle Management: Automatic refresh with encrypted storage using Fernet (AES-256)
+Token Lifecycle Management: Automatic refresh with encrypted storage using Fernet (AES-128-CBC + HMAC-SHA256)
 State Validation: CSRF protection with time-bound state tokens
 Secure by Default: No plaintext credentials in database
 🔄 Intelligent Synchronization Engine
@@ -52,10 +52,10 @@ python
 ✓ Cursor-based pagination (handles millions of records)
 ✓ Exponential backoff with jitter (429 rate limit handling)
 ✓ Resumable checkpoints (crash recovery)
-✓ Idempotent upserts (exactly-once semantics)
+✓ Idempotent upserts (avoids duplicate inserts on retry)
 📊 Production-Ready Patterns
 Structured Logging: JSON logs with request ID correlation
-Comprehensive Testing: Integration tests with >85% coverage
+Testing: OAuth flow test coverage with pytest
 CI/CD Pipeline: Automated testing on every commit
 Mock Provider: Isolated testing environment with realistic behaviors
 🚀 Quick Start
@@ -99,11 +99,11 @@ Re-running immediately...
 [SUCCESS] Sync complete: 0 inserted, 15 updated, 0 skipped
 🧪 Testing
 bash
-# Run all tests with coverage
-python -m pytest -v --cov=app --cov-report=term-missing
+# Run all tests
+python -m pytest -v
 
-# Run specific test suite
-python -m pytest tests/test_sync.py -v
+# Run the OAuth flow test suite
+python -m pytest tests/test_oauth.py -v
 
 # Run with detailed logging
 python -m pytest -v -s
@@ -111,10 +111,8 @@ Test Coverage Highlights:
 
 ✅ OAuth state validation and expiration
 ✅ Token refresh edge cases
-✅ Pagination cursor handling
-✅ Rate limit retry with exponential backoff
-✅ Concurrent sync prevention
-✅ Database transaction rollback
+
+Coverage reporting (pytest-cov) and the rate-limiting/sync test suites are on the roadmap — see Production Considerations below.
 📁 Project Structure
 fintech-oauth-sync-lab/
 ├── app/
@@ -127,9 +125,7 @@ fintech-oauth-sync-lab/
 ├── scripts/
 │   └── demo_sync.py            # Interactive demonstration
 ├── tests/
-│   ├── test_oauth.py           # OAuth flow tests
-│   ├── test_sync.py            # Sync engine tests
-│   └── test_rate_limiting.py  # Backoff algorithm tests
+│   └── test_oauth.py           # OAuth flow tests
 ├── .github/workflows/
 │   └── ci.yml                  # GitHub Actions pipeline
 └── pyproject.toml              # Project dependencies & metadata
