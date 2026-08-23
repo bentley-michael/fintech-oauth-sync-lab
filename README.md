@@ -1,72 +1,86 @@
-# Fintech OAuth Sync Lab
+# OAuth Sync Lab
 
-![CI](https://github.com/bentley-michael/fintech-oauth-sync-lab/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/bentley-michael/oauth-sync-lab/actions/workflows/ci.yml/badge.svg)
 
-Production-grade financial data synchronization engine demonstrating OAuth2 flows, intelligent rate limiting, and fault-tolerant API integration patterns used by fintech platforms like Plaid, Stripe, and modern banking APIs.
+A Python/FastAPI integration lab that demonstrates the mechanics behind reliable OAuth-backed API synchronization: token exchange and refresh, rate-limit-aware pagination, retry handling, resumable sync state, and idempotent persistence.
 
-🎯 Skills Demonstrated
-Backend Engineering • API Integration • OAuth2 Security • Distributed Systems Patterns • Financial Services • Test-Driven Development
+The implementation is framed as a reusable integration pattern rather than a domain-specific product. Financial APIs are one possible use case, but the same sync approach applies to CRM, SaaS, commerce, and other third-party API integrations.
+
+## Skills Demonstrated
+
+Backend Engineering • OAuth2 Integration • API Reliability • Retry/Backoff Design • Data Sync Patterns • Test-Driven Development
 
 Python • FastAPI • SQLAlchemy • OAuth2 • REST APIs • Pytest • GitHub Actions • CI/CD
-🏗️ Architecture
-mermaid
+
+## Architecture
+
+```mermaid
 graph TB
     subgraph "Client Application"
-        A[User/App]
+        A[User or Calling App]
     end
-    
+
     subgraph "FastAPI Server"
         B[OAuth Controller]
         C[Sync Engine]
         D[Provider Client]
         E[Database Layer]
     end
-    
+
     subgraph "External Services"
-        F[Mock Bank Provider]
-        G[Real Financial APIs]
+        F[Mock OAuth Provider]
+        G[Third-Party APIs]
     end
-    
-    A -->|1. Initiate OAuth| B
-    B -->|2. Redirect to Provider| F
-    F -->|3. Auth Code| B
-    B -->|4. Exchange Token| F
-    B -->|5. Store Encrypted Token| E
-    A -->|6. Trigger Sync| C
-    C -->|7. Refresh Token if Needed| D
-    D -->|8. Paginated Requests| F
-    D -.->|Production| G
-    C -->|9. Idempotent Upsert| E
-    
-    style C fill:#00a393
-    style D fill:#00a393
-    style E fill:#4a9eff
-✨ Key Features
-🔐 Secure OAuth2 Implementation
-Token Lifecycle Management: Automatic refresh with encrypted storage using Fernet (AES-128-CBC + HMAC-SHA256)
-State Validation: CSRF protection with time-bound state tokens
-Secure by Default: No plaintext credentials in database
-🔄 Intelligent Synchronization Engine
-python
-# Core sync pattern
-✓ Cursor-based pagination (handles millions of records)
-✓ Exponential backoff with jitter (429 rate limit handling)
-✓ Resumable checkpoints (crash recovery)
-✓ Idempotent upserts (avoids duplicate inserts on retry)
-📊 Production-Ready Patterns
-Structured Logging: JSON logs with request ID correlation
-Testing: OAuth flow test coverage with pytest
-CI/CD Pipeline: Automated testing on every commit
-Mock Provider: Isolated testing environment with realistic behaviors
-🚀 Quick Start
-Prerequisites
-Python 3.12+
-pip 23.0+
-Installation (Windows PowerShell)
-powershell
+
+    A -->|1. Start OAuth flow| B
+    B -->|2. Redirect user| F
+    F -->|3. Return auth code| B
+    B -->|4. Exchange code for tokens| F
+    B -->|5. Store encrypted tokens| E
+    A -->|6. Trigger sync| C
+    C -->|7. Refresh token if needed| D
+    D -->|8. Fetch paginated data| F
+    D -.->|Production pattern| G
+    C -->|9. Idempotent upsert + checkpoint| E
+```
+
+## What This Project Actually Shows
+
+### OAuth token refresh and rotation handling
+
+- Authorization-code flow with provider redirect/callback handling
+- Server-side storage of encrypted access and refresh tokens
+- Automatic access-token refresh when the provider returns `401`
+- Refresh-token replacement support when a new refresh token is returned
+- Time-bound OAuth state validation to reduce CSRF risk
+
+### Rate-limit-aware request sync
+
+- Cursor-based pagination for multi-page sync jobs
+- `429` handling via `Retry-After` parsing
+- Exponential backoff across repeated rate-limit responses
+- Sync checkpoints stored between pages so progress can resume cleanly
+
+### Retry and error handling logic
+
+- Retry loop scoped to provider rate limiting
+- Immediate retry after successful token refresh
+- Clear failure when max rate-limit retries are exceeded
+- Idempotent transaction upserts to avoid duplicate records after retries
+
+## Quick Start
+
+### Prerequisites
+
+- Python 3.12+
+- `pip` 23.0+
+
+### Installation (Windows PowerShell)
+
+```powershell
 # 1. Clone and navigate
-git clone https://github.com/bentley-michael/fintech-oauth-sync-lab.git
-cd fintech-oauth-sync-lab
+git clone https://github.com/bentley-michael/oauth-sync-lab.git
+cd oauth-sync-lab
 
 # 2. Create virtual environment
 py -3.12 -m venv .venv
@@ -78,104 +92,103 @@ pip install -e .
 
 # 4. Start the server
 uvicorn app.main:app --reload
-API Documentation: http://127.0.0.1:8000/docs
+```
 
-Run the Demo
-powershell
+API docs: http://127.0.0.1:8000/docs
+
+### Run the demo
+
+```powershell
 python scripts/demo_sync.py
-Expected Output:
+```
 
-[INFO] Starting OAuth flow for account: demo_user_123
-[INFO] ✓ Authorization successful - exchanging code for token
-[INFO] ✓ Token encrypted and stored securely
-[INFO] Starting sync...
-[INFO] Page 1/3: Retrieved 5 transactions
-[INFO] Page 2/3: Retrieved 5 transactions (rate limited - backing off 2.1s)
-[INFO] Page 3/3: Retrieved 5 transactions
-[SUCCESS] Sync complete: 15 inserted, 0 updated, 0 skipped
+The demo exercises the full flow:
 
-Re-running immediately...
-[INFO] Idempotency check: All transactions already exist
-[SUCCESS] Sync complete: 0 inserted, 15 updated, 0 skipped
-🧪 Testing
-bash
-# Run all tests
+1. Start OAuth connect
+2. Simulate provider authorization
+3. Exchange the authorization code for tokens
+4. Run a first sync
+5. Run a second sync to demonstrate idempotency
+6. Run a sync path that triggers a rate-limit retry
+7. Inspect stored transactions
+
+## Testing
+
+```bash
 python -m pytest -v
-
-# Run the OAuth flow test suite
 python -m pytest tests/test_oauth.py -v
-
-# Run with detailed logging
 python -m pytest -v -s
-Test Coverage Highlights:
+```
 
-✅ OAuth state validation and expiration
-✅ Token refresh edge cases
+Current tests verify:
 
-Coverage reporting (pytest-cov) and the rate-limiting/sync test suites are on the roadmap — see Production Considerations below.
-📁 Project Structure
-fintech-oauth-sync-lab/
+- OAuth state creation and callback flow
+- Expired OAuth state handling
+- Token persistence behavior through the connect flow
+
+## Project Structure
+
+```text
+oauth-sync-lab/
 ├── app/
-│   ├── main.py                 # FastAPI application & routes
-│   ├── sync.py                 # Core sync engine with retry logic
-│   ├── provider_client.py      # HTTP client with OAuth headers
-│   ├── provider_mock.py        # Built-in mock bank API
+│   ├── main.py                 # FastAPI application and routes
+│   ├── sync.py                 # Sync engine with refresh/retry logic
+│   ├── provider_client.py      # Outbound provider client
+│   ├── provider_mock.py        # Built-in mock OAuth/data provider
 │   ├── models.py               # SQLAlchemy ORM models
 │   └── db.py                   # Database session management
 ├── scripts/
-│   └── demo_sync.py            # Interactive demonstration
+│   └── demo_sync.py            # End-to-end local demonstration
 ├── tests/
 │   └── test_oauth.py           # OAuth flow tests
 ├── .github/workflows/
 │   └── ci.yml                  # GitHub Actions pipeline
-└── pyproject.toml              # Project dependencies & metadata
-🎓 Design Decisions
-Why Cursor-Based Pagination?
-Traditional offset pagination breaks with high-volume inserts. Cursor-based pagination guarantees consistency even when data changes during sync.
+└── pyproject.toml              # Project dependencies and metadata
+```
 
-Why Exponential Backoff?
-Linear retry can amplify rate limit violations across multiple clients. Exponential backoff with jitter distributes retry attempts, reducing thundering herd problems.
+## Design Decisions
 
-Why Idempotent Upserts?
-Network failures can cause duplicate requests. Idempotent operations ensure exactly-once semantics without complex distributed locking.
+### Why cursor-based pagination?
+
+Cursor-based pagination is more stable than offset pagination for sync jobs where upstream data may change during retrieval.
+
+### Why exponential backoff?
+
+When a provider responds with `429`, exponential backoff reduces repeated pressure on the API and spaces out retries in a way that is safer for shared integrations.
+
+### Why idempotent upserts?
+
+Retries are only useful if they do not create duplicates. The sync path checks for an existing provider transaction ID before insert and updates the stored record when the item already exists.
 
 ## Security Notes
 
-- OAuth tokens are encrypted at rest before persistence.
-- `TOKEN_KEY` must be rotated and managed via a secret manager in production.
-- OAuth state is time-bound and validated to reduce CSRF risk.
-- Retry/backoff logic prevents aggressive client behavior during provider rate limiting.
-- Enforce HTTPS/TLS and avoid logging secrets or raw token values.
+- OAuth tokens are encrypted before persistence.
+- `TOKEN_KEY` should be managed and rotated through a proper secret-management system in production.
+- OAuth state values are time-bound and validated on callback.
+- Secrets and raw token values should never be logged.
+- HTTPS/TLS should be enforced in any real deployment.
 
-🏭 Production Considerations
-⚠️ Not Implemented (By Design)
-This is a learning lab focused on core patterns. Production deployment would require:
+## Production Considerations
 
-Component	Lab Approach	Production Approach
-Secrets	Environment variables	AWS Secrets Manager / HashiCorp Vault
-Database	SQLite (single-file)	PostgreSQL with read replicas
-OAuth State	SQLite with TTL	Redis cluster with TTL
-Sync Locking	In-memory flag	Distributed lock (Redis/Redlock)
-Observability	JSON logs	Datadog/Prometheus + APM
-Error Handling	Retry logic	+ Circuit breaker + dead letter queue
-🔮 Scaling Path
-Horizontal Scaling: Move to Redis for shared state
-Queue-Based Architecture: Add Celery/RQ for async syncs
-Multi-Region: Deploy read replicas, CDN for static assets
-Monitoring: Add Sentry for error tracking, Prometheus for metrics
-🤝 Contributing
-This is a portfolio/learning project, but feedback is welcome!
+This repo is a focused lab for integration mechanics, not a full production deployment. In production, the same patterns would typically be extended with:
 
-Fork the repository
-Create a feature branch (git checkout -b feature/improvement)
-Run tests (pytest)
-Submit a pull request
-📜 License
-MIT License - Feel free to use this as a reference or starting point for your own projects.
+| Component | Lab Approach | Production Approach |
+| --- | --- | --- |
+| Secrets | Environment variables | Secret manager or vault |
+| Database | SQLite | PostgreSQL or another managed database |
+| OAuth state | SQLite with TTL field | Shared cache/store with TTL |
+| Sync locking | Single-process behavior | Distributed lock or queue |
+| Observability | App logging | Metrics, tracing, alerting |
+| Error handling | Retry/backoff | Circuit breakers, DLQs, replay tooling |
 
-🔗 Connect
-Michael Bentley - LinkedIn • Portfolio • Email
+## Example Use Cases
 
-💡 Interested in discussing API integration patterns, OAuth security, or fintech engineering? Let's connect!
+- Financial account aggregation and transaction sync
+- CRM record ingestion
+- Commerce order reconciliation
+- Analytics or event backfill jobs
+- Any OAuth-backed third-party API that must be polled or synchronized safely
 
-<p align="center"> <sub>Built with ❤️ using FastAPI and modern Python best practices</sub> </p>
+## License
+
+MIT License
